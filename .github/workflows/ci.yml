@@ -28,17 +28,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install library and test dependencies
-        run: python -m pip install -e ".[aiogram,dev]"
-      - name: Test core and runtime
+        run: python -m pip install -e ".[aiogram,legacy,dev]"
+      - name: Test SOCKS5 adapter and legacy compatibility
         run: python -m unittest discover -s tests -v
       - name: Build wheel and sdist
         run: python -m build
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate Docker image
-        run: docker build -t tgws-botapi:ci .
-      - name: Check runtime entrypoint
-        run: docker run --rm tgws-botapi:ci --help

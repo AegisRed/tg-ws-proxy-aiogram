@@ -52,13 +52,10 @@ class GatewaySettingsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             GatewaySettings(api_id=1, api_hash="hash", proxy_port=8081, bot_api_port=8081)
 
-    def test_aiogram_adapter_uses_local_bot_api_endpoint(self):
-        session = aiogram_session(api_url="http://127.0.0.1:8081/")
-        self.assertEqual(
-            session.api.api_url(token="123:abc", method="getMe"),
-            "http://127.0.0.1:8081/bot123:abc/getMe",
-        )
-        self.assertTrue(session.api.is_local)
+    def test_new_aiogram_adapter_uses_socks5_cloud_endpoint(self):
+        session = aiogram_session(proxy_url="socks5://127.0.0.1:1080")
+        self.assertFalse(session.api.is_local)
+        self.assertEqual(session.proxy, "socks5://127.0.0.1:1080")
 
 
 class GatewayRuntimeTests(unittest.TestCase):

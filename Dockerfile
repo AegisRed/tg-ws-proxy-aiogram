@@ -17,7 +17,7 @@ WORKDIR /src/tgws-botapi
 COPY pyproject.toml README.md LICENSE ./
 COPY proxy ./proxy
 COPY tgws_botapi ./tgws_botapi
-RUN pip install --no-cache-dir ".[aiogram]"
+RUN pip install --no-cache-dir ".[aiogram,legacy]"
 
 WORKDIR /app
 COPY --chown=telegram-bot-api:telegram-bot-api examples ./examples
