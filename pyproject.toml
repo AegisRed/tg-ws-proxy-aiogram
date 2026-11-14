@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tgws-botapi"
-version = "0.1.0"
+version = "0.2.0"
 
-description = "Headless Telegram Bot API runtime using Flowseal's MTProto WebSocket bridge"
+description = "Opt-in SOCKS5 Telegram Bot API transport for aiogram; legacy MTProto runtime optional"
 readme = "README.md"
 requires-python = ">=3.10"
 
@@ -20,8 +20,8 @@ keywords = [
     "bot-api",
     "proxy",
     "bypass",
-    "websocket",
-    "mtproto",
+    "socks5",
+    "aiohttp",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -33,10 +33,12 @@ classifiers = [
   "Topic :: System :: Networking :: Firewalls",
 ]
 
-dependencies = ["certifi", "cryptography>=41,<47", "httpx[http2]>=0.28,<0.29"]
+dependencies = []
 
 [project.optional-dependencies]
-aiogram = ["aiogram>=3.0,<4"]
+aiogram = ["aiogram>=3.0,<4", "aiohttp-socks>=0.10,<1"]
+# For historical MTProto gateway commands only. EventBot does not need this.
+legacy = ["certifi", "cryptography>=41,<47", "httpx[http2]>=0.28,<0.29"]
 dev = ["build>=1.2", "ruff>=0.9"]
 
 [project.scripts]
