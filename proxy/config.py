@@ -75,6 +75,7 @@ class ProxyConfig:
     fake_tls_domain: str = ''
     proxy_protocol: bool = False
     force_test_dc: bool = False
+    allow_direct_fallback: bool = True
 
     @property
     def h2_enabled(self) -> bool:

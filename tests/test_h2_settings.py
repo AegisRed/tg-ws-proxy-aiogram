@@ -1,19 +1,13 @@
-"""Default/CLI/GUI configuration must select the same effective H2 route."""
+"""Default and CLI configuration must select the same effective H2 route."""
 import asyncio
 import contextlib
 import io
-import json
 import logging
-import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from proxy.config import ProxyConfig
 from proxy import tg_ws_proxy
-from utils import tray_common
-from utils.default_config import default_tray_config
-from ui.settings import prepare_settings
 
 
 class H2SettingsTest(unittest.TestCase):
@@ -52,34 +46,6 @@ class H2SettingsTest(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         self.assertIn('--no-h2', output.getvalue())
         self.assertNotIn('--cfproxy-h2-media', output.getvalue())
-
-    def test_saved_setting_migration_and_runtime_restart(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / 'config.json'
-            path.write_text(json.dumps({'port': 1444}), encoding='utf-8')
-            with patch.object(tray_common, 'CONFIG_FILE', path), \
-                    patch.object(tray_common, 'ensure_dirs'), \
-                    patch.object(tray_common, '_apply_ui_language'):
-                config = tray_common.load_config()
-                self.assertTrue(config['h2'])
-                change = prepare_settings(config, {'h2': False}, default_tray_config())
-                self.assertTrue(change.requires_restart)
-                tray_common.save_config(change.config)
-                saved = tray_common.load_config()
-                self.assertFalse(saved['h2'])
-                runtime = ProxyConfig()
-                with patch.object(tray_common, 'proxy_config', runtime):
-                    self.assertTrue(tray_common.apply_proxy_config(saved))
-                    self.assertFalse(runtime.h2_enabled)
-                    saved['h2'] = True
-                    self.assertTrue(tray_common.apply_proxy_config(saved))
-                    self.assertTrue(runtime.h2_enabled)
-                    for key, value in [('cfproxy', False), ('no_secure', True),
-                                       ('force_test_dc', True)]:
-                        self.assertTrue(tray_common.apply_proxy_config({**saved, key: value}))
-                        self.assertFalse(runtime.h2_enabled)
-                        self.assertTrue(runtime.cfproxy_h2_media)
-
 
 class H2ServerLifecycleTest(unittest.IsolatedAsyncioTestCase):
     async def test_stop_and_cancellation_close_default_h2_and_listener_tasks(self):

@@ -367,8 +367,10 @@ class ProbeAppdataLenTest(unittest.TestCase):
             self.assertIsNone(result)
             reader.read.assert_not_called()
             hello = writer.write.call_args[0][0]
-            self.assertEqual(parse_client_hello(hello).key_shares,
-                             {GROUP_X25519: X25519_KEY_LEN})
+            # OpenSSL can offer an additional hybrid/PQ key share alongside
+            # X25519; its presence varies across platforms and TLS versions.
+            self.assertEqual(parse_client_hello(hello).key_shares.get(GROUP_X25519),
+                             X25519_KEY_LEN)
             writer.close.assert_called_once()
 
         asyncio.run(scenario())

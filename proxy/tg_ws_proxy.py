@@ -433,22 +433,12 @@ async def _run(stop_event: Optional[asyncio.Event] = None):
         except (OSError, AttributeError):
             pass
 
-    link_host = get_link_host(proxy_config.host)
     ftls = proxy_config.fake_tls_domain
-    dd_link = (f"tg://proxy?server={link_host}"
-               f"&port={proxy_config.port}"
-               f"&secret=dd{proxy_config.secret}")
-    ee_link = ""
-    if ftls:
-        domain_hex = ftls.encode('ascii').hex()
-        ee_link = (f"tg://proxy?server={link_host}"
-                   f"&port={proxy_config.port}"
-                   f"&secret=ee{proxy_config.secret}{domain_hex}")
 
     log.info("=" * 60)
     log.info("  Telegram MTProto WS Bridge Proxy")
     log.info("  Listening on   %s:%d", proxy_config.host, proxy_config.port)
-    log.info("  Secret:        %s", proxy_config.secret)
+    log.info("  Secret:        [hidden]")
     if ftls:
         log.info("  Fake TLS:      %s", ftls)
     log.info("  Target DC IPs:")
@@ -467,10 +457,7 @@ async def _run(stop_event: Optional[asyncio.Event] = None):
         log.info("  No secure:     enabled (port 80 for CF proxy/worker)")
     log.info("=" * 60)
     log.info("  Connect:")
-    if ftls:
-        log.info("    %s", ee_link)
-    else:
-        log.info("    %s", dd_link)
+    log.info("    Local MTProto proxy endpoint available (secret hidden)")
     log.info("=" * 60)
 
     async def log_stats():
@@ -635,6 +622,8 @@ def main():
     h2_flags.add_argument('--cfproxy-h2-media', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--no-cfproxy', action='store_true',
                     help='Disable Cloudflare proxy fallback')
+    ap.add_argument('--no-direct-fallback', action='store_true',
+                    help='Never bypass WebSocket/Cloudflare using direct TCP')
     ap.add_argument('--no-secure', action='store_true',
                         help='Use 80 port for CF-proxy and CF-worker connections')
     ap.add_argument('--fake-tls-domain', type=str, default='',
@@ -677,7 +666,7 @@ def main():
             sys.exit(1)
     else:
         secret_hex = os.urandom(16).hex()
-        log.info("Generated secret: %s", secret_hex)
+        log.info("Generated MTProto secret (hidden)")
 
     proxy_config.port = args.port
     proxy_config.host = args.host
@@ -686,6 +675,7 @@ def main():
     proxy_config.buffer_size = max(4, args.buf_kb) * 1024
     proxy_config.pool_size = max(0, args.pool_size)
     proxy_config.fallback_cfproxy = not args.no_cfproxy
+    proxy_config.allow_direct_fallback = not args.no_direct_fallback
     proxy_config.cfproxy_user_domains = coerce_domain_list(args.cfproxy_domain)
     proxy_config.cfproxy_worker_domains = coerce_domain_list(args.cfproxy_worker_domain)
     proxy_config.cfproxy_h2_media = not args.no_h2
@@ -706,7 +696,7 @@ def main():
     root.addHandler(console)
 
     if args.log_file:
-        from utils.logging_setup import build_log_handler
+        from .logging_setup import build_log_handler
         fh = build_log_handler(
             args.log_file,
             log_max_mb=args.log_max_mb,

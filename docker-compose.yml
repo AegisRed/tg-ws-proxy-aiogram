@@ -1,0 +1,14 @@
+services:
+  example-bot:
+    build:
+      context: .
+    env_file:
+      - .env
+    command: ["run", "--", "python", "-m", "examples.echo_bot"]
+    restart: unless-stopped
+    volumes:
+      - botapi-data:/var/lib/telegram-bot-api
+    # No published ports: local Bot API and MTProto stay in the container.
+
+volumes:
+  botapi-data:
