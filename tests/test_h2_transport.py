@@ -612,7 +612,7 @@ class H2WireTest(unittest.IsolatedAsyncioTestCase):
                             plain_padding = (251, 256)[index]
                             wire = init + up.update(b''.join(
                                 frame(body, tag, padding)
-                                for body, padding in zip(bodies, (plain_padding, 1, 7, 0))))
+                                for body, padding in zip(bodies, (plain_padding, 1, 7, 0), strict=True)))
                             for start, end in ((0, 13), (13, 57), (57, 65), (65, 78), (78, len(wire))):
                                 writer.write(wire[start:end])
                                 await writer.drain()
@@ -817,6 +817,7 @@ class H2WireTest(unittest.IsolatedAsyncioTestCase):
         original = None
         recovered = asyncio.Event()
         chatter_reply = asyncio.Event()
+        stop_chatter = asyncio.Event()
         chatter_requests = 0
 
         async def server():
@@ -834,11 +835,13 @@ class H2WireTest(unittest.IsolatedAsyncioTestCase):
 
         async def chatter():
             index = 0
-            while True:
+            while not stop_chatter.is_set():
                 chatter_reply.clear()
                 await channel.send(b'samekey!' + struct.pack('<I', index) + b'c' * 28, False)
                 index += 1
                 await chatter_reply.wait()
+                if stop_chatter.is_set():
+                    break
                 await asyncio.sleep(.005)
 
         async def receiver():
@@ -855,12 +858,19 @@ class H2WireTest(unittest.IsolatedAsyncioTestCase):
             await channel.send(body, False)
             self.tasks.extend(asyncio.create_task(coro) for coro in (
                 server(), chatter(), receiver(), channel._recover()))
-            await asyncio.wait_for(recovered.wait(), .6)
-            self.assertGreater(chatter_requests, 3)
-            self.assertLessEqual(len(channel.replay_history), 3)
-            self.assertIn(original[1], self.transport.connection.streams)
-            self.assertTrue(self.resets.empty())
-            self.assertEqual(len(self.connections), 1)
+            try:
+                await asyncio.wait_for(recovered.wait(), .6)
+                self.assertGreater(chatter_requests, 3)
+                self.assertLessEqual(len(channel.replay_history), 3)
+                self.assertIn(original[1], self.transport.connection.streams)
+                self.assertTrue(self.resets.empty())
+                self.assertEqual(len(self.connections), 1)
+            finally:
+                # Python 3.10 wait_for can consume cancellation if the
+                # channel-capacity condition wakes concurrently. Unblock the
+                # chatter loop explicitly before asyncTearDown cancels it.
+                stop_chatter.set()
+                chatter_reply.set()
 
     async def test_receiving_other_body_does_not_mask_overdue_request(self):
         channel = _HttpChannel(self.lane, 1, 'parallel-body-recovery-test')
