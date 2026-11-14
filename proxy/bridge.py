@@ -149,7 +149,7 @@ async def do_fallback(reader, writer, relay_init, label,
         methods.append('cf_worker')
     if use_cf:
         methods.append('cf')
-    if fallback_dst:
+    if fallback_dst and proxy_config.allow_direct_fallback:
         methods.append('tcp')
 
     for method in methods:

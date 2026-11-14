@@ -25,3 +25,9 @@ Desktop.ini
 .DS_Store
 
 /icon.icns
+
+# Bot credentials and persistent local TDLib data
+.env
+.env.*
+!.env.example
+.tgws-data/
